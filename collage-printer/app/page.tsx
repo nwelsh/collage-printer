@@ -71,7 +71,7 @@ export default function Home() {
       const scale = Math.min(
         availW / pageSize.width,
         availH / pageSize.height,
-        DPI_RENDER
+        DPI_RENDER,
       );
 
       setPageDimensions({
@@ -103,7 +103,7 @@ export default function Home() {
     if (!files) return;
 
     const fileArray = Array.from(files).filter((file) =>
-      file.type.startsWith("image/")
+      file.type.startsWith("image/"),
     );
 
     if (fileArray.length === 0) return;
@@ -187,7 +187,7 @@ export default function Home() {
     setIsDraggingOver(false);
 
     const files = Array.from(e.dataTransfer.files).filter((file) =>
-      file.type.startsWith("image/")
+      file.type.startsWith("image/"),
     );
 
     if (files.length) {
@@ -245,8 +245,8 @@ export default function Home() {
 
         setItems((items) =>
           items.map((item) =>
-            item.id === id ? { ...item, zIndex: next } : item
-          )
+            item.id === id ? { ...item, zIndex: next } : item,
+          ),
         );
 
         return next;
@@ -276,7 +276,7 @@ export default function Home() {
 
   function handlePointerDown(
     e: React.PointerEvent<HTMLDivElement>,
-    item: Item
+    item: Item,
   ) {
     e.stopPropagation();
 
@@ -325,8 +325,8 @@ export default function Home() {
 
         setItems((prev) =>
           prev.map((current) =>
-            current.id === item.id ? { ...current, x, y } : current
-          )
+            current.id === item.id ? { ...current, x, y } : current,
+          ),
         );
       }
 
@@ -341,8 +341,8 @@ export default function Home() {
 
         setItems((prev) =>
           prev.map((current) =>
-            current.id === item.id ? { ...current, width, height } : current
-          )
+            current.id === item.id ? { ...current, width, height } : current,
+          ),
         );
       }
 
@@ -359,8 +359,8 @@ export default function Home() {
 
         setItems((prev) =>
           prev.map((current) =>
-            current.id === item.id ? { ...current, rotation } : current
-          )
+            current.id === item.id ? { ...current, rotation } : current,
+          ),
         );
       }
     }
@@ -389,8 +389,8 @@ export default function Home() {
 
     setItems((prev) =>
       prev.map((item) =>
-        item.id === selectedId ? { ...item, zIndex: newZ } : item
-      )
+        item.id === selectedId ? { ...item, zIndex: newZ } : item,
+      ),
     );
   }
 
@@ -399,8 +399,8 @@ export default function Home() {
 
     setItems((prev) =>
       prev.map((item) =>
-        item.id === selectedId ? { ...item, zIndex: 1 } : item
-      )
+        item.id === selectedId ? { ...item, zIndex: 1 } : item,
+      ),
     );
   }
 
@@ -409,8 +409,8 @@ export default function Home() {
 
     setItems((prev) =>
       prev.map((item) =>
-        item.id === selectedId ? { ...item, rotation: 0 } : item
-      )
+        item.id === selectedId ? { ...item, rotation: 0 } : item,
+      ),
     );
   }
 
@@ -454,8 +454,8 @@ export default function Home() {
                 y: (pageH - height) / 2,
                 rotation: 0,
               }
-            : item
-        )
+            : item,
+        ),
       );
     };
 
@@ -527,7 +527,7 @@ export default function Home() {
           --graphite-2: #38393e;
           --paper: #fafaf7;
           --paper-shadow: rgba(0, 0, 0, 0.28);
-          --mark: #c0392b;
+          --mark: #ae6cf0;
           --line: #4a4c52;
           --text-dim: #9a9ca3;
         }
@@ -555,6 +555,7 @@ export default function Home() {
           display: flex;
           height: 100vh;
           width: 100vw;
+          font-family: "Courier New", monospace;
         }
 
         /* Sidebar */
@@ -598,6 +599,7 @@ export default function Home() {
           display: flex;
           flex-direction: column;
           gap: 7px;
+          font-family: "Courier New", monospace;
         }
 
         .field label {
@@ -614,12 +616,14 @@ export default function Home() {
           background: var(--graphite);
           color: #f2f2f0;
           border: 1px solid var(--line);
-          border-radius: 3px;
+          border-radius: 1rem;
           padding: 9px 10px;
           font-size: 13px;
           cursor: pointer;
           font-family: inherit;
-          transition: border-color 0.15s, background 0.15s;
+          transition:
+            border-color 0.15s,
+            background 0.15s;
         }
 
         select:hover,
@@ -642,11 +646,13 @@ export default function Home() {
           border-color: var(--mark);
           font-weight: 600;
           letter-spacing: 0.3px;
+          border-radius: 1rem;
         }
 
         .btn.primary:hover {
-          background: #a8331f;
-          border-color: #a8331f;
+          background: transparent;
+          border-color: var(--mark);
+          color: var(--mark);
         }
 
         .btn.ghost {
@@ -685,7 +691,9 @@ export default function Home() {
           height: 12px;
           border-radius: 50%;
           background: var(--text-dim);
-          transition: left 0.15s, background 0.15s;
+          transition:
+            left 0.15s,
+            background 0.15s;
         }
 
         .switch.on {
@@ -724,12 +732,9 @@ export default function Home() {
           justify-content: center;
           overflow: auto;
           padding: 40px;
-          background: radial-gradient(
-                circle at 1px 1px,
-                #3a3c42 1px,
-                transparent 0
-              )
-              0 0 / 22px 22px,
+          background:
+            radial-gradient(circle at 1px 1px, #3a3c42 1px, transparent 0) 0 0 /
+              22px 22px,
             var(--graphite);
         }
 
@@ -741,7 +746,8 @@ export default function Home() {
         .page {
           position: relative;
           background: var(--paper);
-          box-shadow: 0 18px 50px var(--paper-shadow),
+          box-shadow:
+            0 18px 50px var(--paper-shadow),
             0 2px 6px rgba(0, 0, 0, 0.35);
           overflow: hidden;
           transition: outline-color 0.15s;
@@ -806,7 +812,8 @@ export default function Home() {
         .grid-overlay {
           position: absolute;
           inset: 0;
-          background-image: linear-gradient(
+          background-image:
+            linear-gradient(
               to right,
               rgba(192, 57, 38, 0.08) 1px,
               transparent 1px
@@ -980,8 +987,7 @@ export default function Home() {
 
         <aside className="sidebar">
           <div className="brand">
-            <span className="mark">✕</span>
-            <h1>Layout &amp; Print</h1>
+            <h1>NICOLE'S PRINTER CANVAS</h1>
           </div>
 
           <div className="field">
@@ -1001,31 +1007,8 @@ export default function Home() {
           </div>
 
           <div className="field">
-            <label>Page size</label>
-
-            <select
-              value={pageSizeKey}
-              onChange={(e) => setPageSizeKey(e.target.value)}
-            >
-              <option value="8.5x11">Letter — 8.5 × 11 in</option>
-
-              <option value="11x8.5">Letter — 11 × 8.5 in</option>
-
-              <option value="8.27x11.69">A4 — 210 × 297 mm</option>
-
-              <option value="11.69x8.27">A4 — 297 × 210 mm</option>
-
-              <option value="4x6">Photo — 4 × 6 in</option>
-
-              <option value="6x4">Photo — 6 × 4 in</option>
-
-              <option value="8x8">Square — 8 × 8 in</option>
-            </select>
-          </div>
-
-          <div className="field">
             <div className="toggle">
-              <span>Snap to grid</span>
+              <label>Snap to grid</label>
 
               <div
                 className={`switch ${snapEnabled ? "on" : ""}`}
@@ -1034,36 +1017,12 @@ export default function Home() {
             </div>
 
             <div className="toggle">
-              <span>Show grid</span>
+              <label>Show grid</label>
 
               <div
                 className={`switch ${showGrid ? "on" : ""}`}
                 onClick={() => setShowGrid((prev) => !prev)}
               />
-            </div>
-          </div>
-
-          <div className="field">
-            <label>Arrange</label>
-
-            <div className="btn-row">
-              <button className="btn ghost" onClick={bringToFront}>
-                Front
-              </button>
-
-              <button className="btn ghost" onClick={sendToBack}>
-                Back
-              </button>
-            </div>
-
-            <div className="btn-row">
-              <button className="btn ghost" onClick={fitToPage}>
-                Fit to page
-              </button>
-
-              <button className="btn ghost" onClick={resetRotation}>
-                Reset rotate
-              </button>
             </div>
           </div>
 
@@ -1078,19 +1037,12 @@ export default function Home() {
             style={{ fontSize: "14px", padding: "12px" }}
             onClick={printPage}
           >
-            🖨 Print
+            Print
           </button>
 
           <button className="btn ghost" onClick={clearPage}>
             Clear page
           </button>
-
-          <div className="hint">
-            Drag images to position them. Drag the corner dot to resize, the
-            top dot to rotate. Drag files in from your desktop, or paste
-            (Cmd/Ctrl+V) a copied image. Click Print — only the page area is
-            sent to the printer, exactly as arranged.
-          </div>
         </aside>
 
         {/* Canvas */}
@@ -1124,18 +1076,14 @@ export default function Home() {
                 <div className="empty-msg">
                   <div className="big">Blank page</div>
 
-                  <div>
-                    Add, drag, or paste images to start arranging
-                  </div>
+                  <div>Add, drag, or paste images to start arranging</div>
                 </div>
               )}
 
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className={`item ${
-                    selectedId === item.id ? "selected" : ""
-                  }`}
+                  className={`item ${selectedId === item.id ? "selected" : ""}`}
                   style={{
                     left: item.x,
                     top: item.y,
