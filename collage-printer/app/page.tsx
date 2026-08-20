@@ -31,7 +31,7 @@ const PAGE_SIZES: Record<string, PageSize> = {
 const GRID = 20;
 const DPI_RENDER = 96;
 
-export default function Page() {
+export default function Home() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,6 +42,7 @@ export default function Page() {
 
   const [snapEnabled, setSnapEnabled] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   const [pageSizeKey, setPageSizeKey] = useState("8.5x11");
 
@@ -90,7 +91,7 @@ export default function Page() {
 
   /*
    * ------------------------------------------------------------
-   * Add images
+   * Add images (file picker, drag-and-drop, paste all funnel here)
    * ------------------------------------------------------------
    */
 
@@ -98,10 +99,16 @@ export default function Page() {
     fileInputRef.current?.click();
   }
 
-  function handleFiles(files: FileList | null) {
+  function handleFiles(files: FileList | File[] | null) {
     if (!files) return;
 
-    Array.from(files).forEach((file, index) => {
+    const fileArray = Array.from(files).filter((file) =>
+      file.type.startsWith("image/")
+    );
+
+    if (fileArray.length === 0) return;
+
+    fileArray.forEach((file, index) => {
       const reader = new FileReader();
 
       reader.onload = (event) => {
@@ -120,22 +127,14 @@ export default function Page() {
           let width = img.naturalWidth;
           let height = img.naturalHeight;
 
-          const ratio = Math.min(
-            maxDim / width,
-            maxDim / height,
-            1
-          );
+          const ratio = Math.min(maxDim / width, maxDim / height, 1);
 
           width *= ratio;
           height *= ratio;
 
-          const x =
-            (pageW - width) / 2 +
-            index * 18;
+          const x = (pageW - width) / 2 + index * 18;
 
-          const y =
-            (pageH - height) / 2 +
-            index * 18;
+          const y = (pageH - height) / 2 + index * 18;
 
           const newZ = zTop + index + 1;
 
@@ -164,8 +163,72 @@ export default function Page() {
       fileInputRef.current.value = "";
     }
 
-    setZTop((prev) => prev + files.length);
+    setZTop((prev) => prev + fileArray.length);
   }
+
+  /*
+   * ------------------------------------------------------------
+   * Drag-and-drop from the OS onto the page
+   * ------------------------------------------------------------
+   */
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDraggingOver(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDraggingOver(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDraggingOver(false);
+
+    const files = Array.from(e.dataTransfer.files).filter((file) =>
+      file.type.startsWith("image/")
+    );
+
+    if (files.length) {
+      handleFiles(files);
+    }
+  }
+
+  /*
+   * ------------------------------------------------------------
+   * Paste from clipboard (Cmd/Ctrl+V)
+   * ------------------------------------------------------------
+   */
+
+  useEffect(() => {
+    function handlePaste(e: ClipboardEvent) {
+      const clipboardItems = e.clipboardData?.items;
+
+      if (!clipboardItems) return;
+
+      const files: File[] = [];
+
+      for (const item of Array.from(clipboardItems)) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) files.push(file);
+        }
+      }
+
+      if (files.length) {
+        e.preventDefault();
+        handleFiles(files);
+      }
+    }
+
+    window.addEventListener("paste", handlePaste);
+
+    return () => {
+      window.removeEventListener("paste", handlePaste);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageDimensions, zTop]);
 
   /*
    * ------------------------------------------------------------
@@ -182,9 +245,7 @@ export default function Page() {
 
         setItems((items) =>
           items.map((item) =>
-            item.id === id
-              ? { ...item, zIndex: next }
-              : item
+            item.id === id ? { ...item, zIndex: next } : item
           )
         );
 
@@ -200,9 +261,7 @@ export default function Page() {
    */
 
   function deleteItem(id: number) {
-    setItems((prev) =>
-      prev.filter((item) => item.id !== id)
-    );
+    setItems((prev) => prev.filter((item) => item.id !== id));
 
     if (selectedId === id) {
       setSelectedId(null);
@@ -211,7 +270,7 @@ export default function Page() {
 
   /*
    * ------------------------------------------------------------
-   * Drag / Resize / Rotate
+   * Drag / Resize / Rotate (existing items on the page)
    * ------------------------------------------------------------
    */
 
@@ -244,11 +303,7 @@ export default function Page() {
     const startRotation = item.rotation;
 
     const startAngle =
-      Math.atan2(
-        startY - centerY,
-        startX - centerX
-      ) *
-      (180 / Math.PI);
+      Math.atan2(startY - centerY, startX - centerX) * (180 / Math.PI);
 
     let mode: "move" | "resize" | "rotate" = "move";
 
@@ -260,13 +315,8 @@ export default function Page() {
 
     function handleMove(ev: PointerEvent) {
       if (mode === "move") {
-        let x =
-          startLeft +
-          (ev.clientX - startX);
-
-        let y =
-          startTop +
-          (ev.clientY - startY);
+        let x = startLeft + (ev.clientX - startX);
+        let y = startTop + (ev.clientY - startY);
 
         if (snapEnabled) {
           x = Math.round(x / GRID) * GRID;
@@ -275,105 +325,53 @@ export default function Page() {
 
         setItems((prev) =>
           prev.map((current) =>
-            current.id === item.id
-              ? {
-                  ...current,
-                  x,
-                  y,
-                }
-              : current
+            current.id === item.id ? { ...current, x, y } : current
           )
         );
       }
 
       if (mode === "resize") {
-        let width = Math.max(
-          20,
-          startWidth +
-            (ev.clientX - startX)
-        );
-
-        let height = Math.max(
-          20,
-          startHeight +
-            (ev.clientY - startY)
-        );
+        let width = Math.max(20, startWidth + (ev.clientX - startX));
+        let height = Math.max(20, startHeight + (ev.clientY - startY));
 
         if (snapEnabled) {
-          width =
-            Math.round(width / GRID) *
-            GRID;
-
-          height =
-            Math.round(height / GRID) *
-            GRID;
+          width = Math.round(width / GRID) * GRID;
+          height = Math.round(height / GRID) * GRID;
         }
 
         setItems((prev) =>
           prev.map((current) =>
-            current.id === item.id
-              ? {
-                  ...current,
-                  width,
-                  height,
-                }
-              : current
+            current.id === item.id ? { ...current, width, height } : current
           )
         );
       }
 
       if (mode === "rotate") {
         const angle =
-          Math.atan2(
-            ev.clientY - centerY,
-            ev.clientX - centerX
-          ) *
+          Math.atan2(ev.clientY - centerY, ev.clientX - centerX) *
           (180 / Math.PI);
 
-        let rotation =
-          startRotation +
-          (angle - startAngle);
+        let rotation = startRotation + (angle - startAngle);
 
         if (snapEnabled) {
-          rotation =
-            Math.round(rotation / 15) *
-            15;
+          rotation = Math.round(rotation / 15) * 15;
         }
 
         setItems((prev) =>
           prev.map((current) =>
-            current.id === item.id
-              ? {
-                  ...current,
-                  rotation,
-                }
-              : current
+            current.id === item.id ? { ...current, rotation } : current
           )
         );
       }
     }
 
     function handleUp() {
-      window.removeEventListener(
-        "pointermove",
-        handleMove
-      );
-
-      window.removeEventListener(
-        "pointerup",
-        handleUp
-      );
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
     }
 
-    window.addEventListener(
-      "pointermove",
-      handleMove
-    );
-
-    window.addEventListener(
-      "pointerup",
-      handleUp
-    );
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
   }
 
   /*
@@ -391,12 +389,7 @@ export default function Page() {
 
     setItems((prev) =>
       prev.map((item) =>
-        item.id === selectedId
-          ? {
-              ...item,
-              zIndex: newZ,
-            }
-          : item
+        item.id === selectedId ? { ...item, zIndex: newZ } : item
       )
     );
   }
@@ -406,12 +399,7 @@ export default function Page() {
 
     setItems((prev) =>
       prev.map((item) =>
-        item.id === selectedId
-          ? {
-              ...item,
-              zIndex: 1,
-            }
-          : item
+        item.id === selectedId ? { ...item, zIndex: 1 } : item
       )
     );
   }
@@ -421,12 +409,7 @@ export default function Page() {
 
     setItems((prev) =>
       prev.map((item) =>
-        item.id === selectedId
-          ? {
-              ...item,
-              rotation: 0,
-            }
-          : item
+        item.id === selectedId ? { ...item, rotation: 0 } : item
       )
     );
   }
@@ -440,9 +423,7 @@ export default function Page() {
   function fitToPage() {
     if (selectedId === null) return;
 
-    const selected = items.find(
-      (item) => item.id === selectedId
-    );
+    const selected = items.find((item) => item.id === selectedId);
 
     if (!selected) return;
 
@@ -452,9 +433,7 @@ export default function Page() {
       const pageW = pageDimensions.width;
       const pageH = pageDimensions.height;
 
-      const ratio =
-        img.naturalWidth /
-        img.naturalHeight;
+      const ratio = img.naturalWidth / img.naturalHeight;
 
       let width = pageW * 0.9;
       let height = width / ratio;
@@ -490,9 +469,7 @@ export default function Page() {
    */
 
   function clearPage() {
-    const confirmed = window.confirm(
-      "Remove all images from the page?"
-    );
+    const confirmed = window.confirm("Remove all images from the page?");
 
     if (!confirmed) return;
 
@@ -525,8 +502,7 @@ export default function Page() {
       const target = e.target as HTMLElement;
 
       if (
-        (e.key === "Delete" ||
-          e.key === "Backspace") &&
+        (e.key === "Delete" || e.key === "Backspace") &&
         selectedId !== null &&
         target.tagName !== "INPUT"
       ) {
@@ -534,17 +510,12 @@ export default function Page() {
       }
     }
 
-    window.addEventListener(
-      "keydown",
-      handleKeyDown
-    );
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener(
-        "keydown",
-        handleKeyDown
-      );
+      window.removeEventListener("keydown", handleKeyDown);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
   return (
@@ -571,10 +542,7 @@ export default function Page() {
           padding: 0;
           height: 100%;
           background: var(--graphite);
-          font-family:
-            "Helvetica Neue",
-            Arial,
-            sans-serif;
+          font-family: "Helvetica Neue", Arial, sans-serif;
           color: #f2f2f0;
           overflow: hidden;
         }
@@ -651,9 +619,7 @@ export default function Page() {
           font-size: 13px;
           cursor: pointer;
           font-family: inherit;
-          transition:
-            border-color 0.15s,
-            background 0.15s;
+          transition: border-color 0.15s, background 0.15s;
         }
 
         select:hover,
@@ -719,9 +685,7 @@ export default function Page() {
           height: 12px;
           border-radius: 50%;
           background: var(--text-dim);
-          transition:
-            left 0.15s,
-            background 0.15s;
+          transition: left 0.15s, background 0.15s;
         }
 
         .switch.on {
@@ -760,13 +724,12 @@ export default function Page() {
           justify-content: center;
           overflow: auto;
           padding: 40px;
-          background:
-            radial-gradient(
-              circle at 1px 1px,
-              #3a3c42 1px,
-              transparent 0
-            )
-            0 0 / 22px 22px,
+          background: radial-gradient(
+                circle at 1px 1px,
+                #3a3c42 1px,
+                transparent 0
+              )
+              0 0 / 22px 22px,
             var(--graphite);
         }
 
@@ -778,10 +741,15 @@ export default function Page() {
         .page {
           position: relative;
           background: var(--paper);
-          box-shadow:
-            0 18px 50px var(--paper-shadow),
+          box-shadow: 0 18px 50px var(--paper-shadow),
             0 2px 6px rgba(0, 0, 0, 0.35);
           overflow: hidden;
+          transition: outline-color 0.15s;
+        }
+
+        .page.drag-over {
+          outline: 2px dashed var(--mark);
+          outline-offset: -2px;
         }
 
         /* Crop marks */
@@ -838,8 +806,7 @@ export default function Page() {
         .grid-overlay {
           position: absolute;
           inset: 0;
-          background-image:
-            linear-gradient(
+          background-image: linear-gradient(
               to right,
               rgba(192, 57, 38, 0.08) 1px,
               transparent 1px
@@ -1020,10 +987,7 @@ export default function Page() {
           <div className="field">
             <label>Add images</label>
 
-            <button
-              className="btn primary"
-              onClick={handleAddImages}
-            >
+            <button className="btn primary" onClick={handleAddImages}>
               + Add Images
             </button>
 
@@ -1032,9 +996,7 @@ export default function Page() {
               type="file"
               accept="image/*"
               multiple
-              onChange={(e) =>
-                handleFiles(e.target.files)
-              }
+              onChange={(e) => handleFiles(e.target.files)}
             />
           </div>
 
@@ -1043,37 +1005,21 @@ export default function Page() {
 
             <select
               value={pageSizeKey}
-              onChange={(e) =>
-                setPageSizeKey(e.target.value)
-              }
+              onChange={(e) => setPageSizeKey(e.target.value)}
             >
-              <option value="8.5x11">
-                Letter — 8.5 × 11 in
-              </option>
+              <option value="8.5x11">Letter — 8.5 × 11 in</option>
 
-              <option value="11x8.5">
-                Letter — 11 × 8.5 in
-              </option>
+              <option value="11x8.5">Letter — 11 × 8.5 in</option>
 
-              <option value="8.27x11.69">
-                A4 — 210 × 297 mm
-              </option>
+              <option value="8.27x11.69">A4 — 210 × 297 mm</option>
 
-              <option value="11.69x8.27">
-                A4 — 297 × 210 mm
-              </option>
+              <option value="11.69x8.27">A4 — 297 × 210 mm</option>
 
-              <option value="4x6">
-                Photo — 4 × 6 in
-              </option>
+              <option value="4x6">Photo — 4 × 6 in</option>
 
-              <option value="6x4">
-                Photo — 6 × 4 in
-              </option>
+              <option value="6x4">Photo — 6 × 4 in</option>
 
-              <option value="8x8">
-                Square — 8 × 8 in
-              </option>
+              <option value="8x8">Square — 8 × 8 in</option>
             </select>
           </div>
 
@@ -1082,14 +1028,8 @@ export default function Page() {
               <span>Snap to grid</span>
 
               <div
-                className={`switch ${
-                  snapEnabled ? "on" : ""
-                }`}
-                onClick={() =>
-                  setSnapEnabled(
-                    (prev) => !prev
-                  )
-                }
+                className={`switch ${snapEnabled ? "on" : ""}`}
+                onClick={() => setSnapEnabled((prev) => !prev)}
               />
             </div>
 
@@ -1097,14 +1037,8 @@ export default function Page() {
               <span>Show grid</span>
 
               <div
-                className={`switch ${
-                  showGrid ? "on" : ""
-                }`}
-                onClick={() =>
-                  setShowGrid(
-                    (prev) => !prev
-                  )
-                }
+                className={`switch ${showGrid ? "on" : ""}`}
+                onClick={() => setShowGrid((prev) => !prev)}
               />
             </div>
           </div>
@@ -1113,78 +1047,55 @@ export default function Page() {
             <label>Arrange</label>
 
             <div className="btn-row">
-              <button
-                className="btn ghost"
-                onClick={bringToFront}
-              >
+              <button className="btn ghost" onClick={bringToFront}>
                 Front
               </button>
 
-              <button
-                className="btn ghost"
-                onClick={sendToBack}
-              >
+              <button className="btn ghost" onClick={sendToBack}>
                 Back
               </button>
             </div>
 
             <div className="btn-row">
-              <button
-                className="btn ghost"
-                onClick={fitToPage}
-              >
+              <button className="btn ghost" onClick={fitToPage}>
                 Fit to page
               </button>
 
-              <button
-                className="btn ghost"
-                onClick={resetRotation}
-              >
+              <button className="btn ghost" onClick={resetRotation}>
                 Reset rotate
               </button>
             </div>
           </div>
 
           <span className="count-badge">
-            {items.length} image
-            {items.length === 1 ? "" : "s"} on page
+            {items.length} image{items.length === 1 ? "" : "s"} on page
           </span>
 
           <div className="spacer" />
 
           <button
             className="btn primary"
-            style={{
-              fontSize: "14px",
-              padding: "12px",
-            }}
+            style={{ fontSize: "14px", padding: "12px" }}
             onClick={printPage}
           >
             🖨 Print
           </button>
 
-          <button
-            className="btn ghost"
-            onClick={clearPage}
-          >
+          <button className="btn ghost" onClick={clearPage}>
             Clear page
           </button>
 
           <div className="hint">
-            Drag images to position them. Drag
-            the corner dot to resize, the top
-            dot to rotate. Click Print — only
-            the page area is sent to the
-            printer, exactly as arranged.
+            Drag images to position them. Drag the corner dot to resize, the
+            top dot to rotate. Drag files in from your desktop, or paste
+            (Cmd/Ctrl+V) a copied image. Click Print — only the page area is
+            sent to the printer, exactly as arranged.
           </div>
         </aside>
 
         {/* Canvas */}
 
-        <div
-          ref={viewportRef}
-          className="viewport"
-        >
+        <div ref={viewportRef} className="viewport">
           <div className="page-wrap">
             <div className="crop tl" />
             <div className="crop tr" />
@@ -1193,31 +1104,28 @@ export default function Page() {
 
             <div
               ref={pageRef}
-              className="page"
+              className={`page ${isDraggingOver ? "drag-over" : ""}`}
               style={{
                 width: pageDimensions.width,
                 height: pageDimensions.height,
               }}
               onPointerDown={(e) => {
-                if (
-                  e.target === e.currentTarget
-                ) {
+                if (e.target === e.currentTarget) {
                   setSelectedId(null);
                 }
               }}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
             >
-              {showGrid && (
-                <div className="grid-overlay" />
-              )}
+              {showGrid && <div className="grid-overlay" />}
 
               {items.length === 0 && (
                 <div className="empty-msg">
-                  <div className="big">
-                    Blank page
-                  </div>
+                  <div className="big">Blank page</div>
 
                   <div>
-                    Add images to start arranging
+                    Add, drag, or paste images to start arranging
                   </div>
                 </div>
               )}
@@ -1226,9 +1134,7 @@ export default function Page() {
                 <div
                   key={item.id}
                   className={`item ${
-                    selectedId === item.id
-                      ? "selected"
-                      : ""
+                    selectedId === item.id ? "selected" : ""
                   }`}
                   style={{
                     left: item.x,
@@ -1238,37 +1144,20 @@ export default function Page() {
                     transform: `rotate(${item.rotation}deg)`,
                     zIndex: item.zIndex,
                   }}
-                  onPointerDown={(e) =>
-                    handlePointerDown(
-                      e,
-                      item
-                    )
-                  }
+                  onPointerDown={(e) => handlePointerDown(e, item)}
                 >
-                  <img
-                    src={item.src}
-                    draggable={false}
-                    alt=""
-                  />
+                  <img src={item.src} draggable={false} alt="" />
 
                   <div className="rot-line" />
 
-                  <div
-                    className="handle h-rot"
-                    title="Rotate"
-                  />
+                  <div className="handle h-rot" title="Rotate" />
 
-                  <div
-                    className="handle h-br"
-                    title="Resize"
-                  />
+                  <div className="handle h-br" title="Resize" />
 
                   <button
                     className="del"
                     title="Delete"
-                    onPointerDown={(e) =>
-                      e.stopPropagation()
-                    }
+                    onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => {
                       e.stopPropagation();
                       deleteItem(item.id);
