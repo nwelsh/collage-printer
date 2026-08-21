@@ -31,6 +31,15 @@ const PAGE_SIZES: Record<string, PageSize> = {
 const GRID = 20;
 const DPI_RENDER = 96;
 
+// TODO: 
+/*
+- Save
+- Resize single image
+- Resize many image
+- sizing the page correctly 
+- multiselect image
+*/
+
 export default function Home() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
