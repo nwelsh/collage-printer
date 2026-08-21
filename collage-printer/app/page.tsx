@@ -47,8 +47,8 @@ export default function Home() {
   const [pageSizeKey, setPageSizeKey] = useState("8.5x11");
 
   const [pageDimensions, setPageDimensions] = useState({
-    width: 816,
-    height: 1056,
+    width: 794, // 8.27in * 96dpi
+    height: 1123,
   });
 
   const pageSize = PAGE_SIZES[pageSizeKey];
@@ -939,6 +939,11 @@ export default function Home() {
           display: flex;
         }
 
+        @page {
+          size: ${pageSize.width}in ${pageSize.height}in;
+          margin: 0;
+        }
+
         @media print {
           body * {
             visibility: hidden;
@@ -1004,6 +1009,29 @@ export default function Home() {
               multiple
               onChange={(e) => handleFiles(e.target.files)}
             />
+          </div>
+
+          <div className="field">
+            <label>Page size</label>
+
+            <select
+              value={pageSizeKey}
+              onChange={(e) => setPageSizeKey(e.target.value)}
+            >
+              <option value="8.5x11">Letter — 8.5 × 11 in</option>
+
+              <option value="11x8.5">Letter — 11 × 8.5 in</option>
+
+              <option value="8.27x11.69">A4 — 210 × 297 mm</option>
+
+              <option value="11.69x8.27">A4 — 297 × 210 mm</option>
+
+              <option value="4x6">Photo — 4 × 6 in</option>
+
+              <option value="6x4">Photo — 6 × 4 in</option>
+
+              <option value="8x8">Square — 8 × 8 in</option>
+            </select>
           </div>
 
           <div className="field">
