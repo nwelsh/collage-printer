@@ -26,12 +26,13 @@ const PAGE_SIZES: Record<string, PageSize> = {
   "4x6": { width: 4, height: 6 },
   "6x4": { width: 6, height: 4 },
   "8x8": { width: 8, height: 8 },
+  '10x10': { width: 6, height: 6 },
 };
 
 const GRID = 20;
 const DPI_RENDER = 96;
 
-// TODO: 
+// TODO:
 /*
 - Save
 - Resize single image
@@ -954,6 +955,14 @@ export default function Home() {
         }
 
         @media print {
+          .viewport {
+            padding: 0 !important;
+            display: block !important;
+          }
+
+          .page-wrap {
+            position: static !important;
+          }
           body * {
             visibility: hidden;
           }
@@ -970,6 +979,9 @@ export default function Home() {
             left: 0;
             margin: 0;
 
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
             width: ${pageSize.width}in !important;
             height: ${pageSize.height}in !important;
           }
@@ -1040,6 +1052,7 @@ export default function Home() {
               <option value="6x4">Photo — 6 × 4 in</option>
 
               <option value="8x8">Square — 8 × 8 in</option>
+              <option value="10x10">Square — 10 × 10 in</option>
             </select>
           </div>
 
