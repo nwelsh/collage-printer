@@ -26,7 +26,7 @@ const PAGE_SIZES: Record<string, PageSize> = {
   "4x6": { width: 4, height: 6 },
   "6x4": { width: 6, height: 4 },
   "8x8": { width: 8, height: 8 },
-  '10x10': { width: 6, height: 6 },
+  "10x10": { width: 6, height: 6 },
 };
 
 const GRID = 20;
@@ -75,8 +75,8 @@ export default function Home() {
 
       if (!viewport) return;
 
-      const availW = viewport.clientWidth - 80;
-      const availH = viewport.clientHeight - 80;
+      const availW = viewport.clientWidth - 190;
+      const availH = viewport.clientHeight - 190;
 
       const scale = Math.min(
         availW / pageSize.width,
@@ -974,14 +974,10 @@ export default function Home() {
 
           .page {
             box-shadow: none !important;
-            position: absolute;
-            top: 0;
-            left: 0;
-            margin: 0;
-
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
+            margin: 0;
             width: ${pageSize.width}in !important;
             height: ${pageSize.height}in !important;
           }
