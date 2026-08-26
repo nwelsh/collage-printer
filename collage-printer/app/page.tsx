@@ -35,11 +35,14 @@ const DPI_RENDER = 96;
 // TODO:
 /*
 - Save
-- Resize single image
 - Resize many image
 - sizing the page correctly 
 - multiselect image
 */
+
+function round2(n: number) {
+  return Math.round(n * 100) / 100;
+}
 
 export default function Home() {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -53,6 +56,7 @@ export default function Home() {
   const [snapEnabled, setSnapEnabled] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [lockAspect, setLockAspect] = useState(true);
 
   const [pageSizeKey, setPageSizeKey] = useState("8.5x11");
 
@@ -62,6 +66,13 @@ export default function Home() {
   });
 
   const pageSize = PAGE_SIZES[pageSizeKey];
+
+  // Pixels-per-inch for the currently rendered page. Since layoutPage()
+  // always applies a single uniform scale to both dimensions, this is the
+  // same whether derived from width or height.
+  const scale = pageDimensions.width / pageSize.width;
+
+  const selectedItem = items.find((item) => item.id === selectedId) || null;
 
   /*
    * ------------------------------------------------------------
@@ -382,6 +393,58 @@ export default function Home() {
 
     window.addEventListener("pointermove", handleMove);
     window.addEventListener("pointerup", handleUp);
+  }
+
+  /*
+   * ------------------------------------------------------------
+   * Resize via inches (sidebar inputs)
+   * ------------------------------------------------------------
+   */
+
+  function inchesToPx(inches: number) {
+    return inches * scale;
+  }
+
+  function pxToInches(px: number) {
+    return px / scale;
+  }
+
+  function setWidthInches(inches: number) {
+    if (selectedId === null || Number.isNaN(inches) || inches <= 0) return;
+
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== selectedId) return item;
+
+        const width = Math.max(inchesToPx(0.1), inchesToPx(inches));
+
+        if (lockAspect && item.height > 0) {
+          const aspect = item.width / item.height;
+          return { ...item, width, height: width / aspect };
+        }
+
+        return { ...item, width };
+      }),
+    );
+  }
+
+  function setHeightInches(inches: number) {
+    if (selectedId === null || Number.isNaN(inches) || inches <= 0) return;
+
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== selectedId) return item;
+
+        const height = Math.max(inchesToPx(0.1), inchesToPx(inches));
+
+        if (lockAspect && item.width > 0) {
+          const aspect = item.width / item.height;
+          return { ...item, height, width: height * aspect };
+        }
+
+        return { ...item, height };
+      }),
+    );
   }
 
   /*
@@ -733,6 +796,72 @@ export default function Home() {
           color: var(--text-dim);
         }
 
+        /* Inch-size panel */
+
+        .size-panel {
+          border: 1px solid var(--line);
+          border-radius: 1rem;
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          background: var(--graphite);
+        }
+
+        .size-row {
+          display: flex;
+          gap: 8px;
+        }
+
+        .size-input-wrap {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          background: var(--ink);
+          border: 1px solid var(--line);
+          border-radius: 0.75rem;
+          padding: 7px 10px;
+          gap: 6px;
+        }
+
+        .size-input-wrap:focus-within {
+          border-color: var(--mark);
+        }
+
+        .size-input-label {
+          font-size: 10px;
+          color: var(--text-dim);
+          font-family: "Courier New", monospace;
+        }
+
+        .size-input {
+          flex: 1;
+          width: 100%;
+          min-width: 0;
+          background: transparent;
+          border: none;
+          color: #f2f2f0;
+          font-size: 13px;
+          font-family: inherit;
+          outline: none;
+        }
+
+        .size-input::-webkit-outer-spin-button,
+        .size-input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+
+        .size-input[type="number"] {
+          -moz-appearance: textfield;
+        }
+
+        .size-unit {
+          font-size: 10px;
+          color: var(--text-dim);
+          font-family: "Courier New", monospace;
+        }
+
         /* Canvas */
 
         .viewport {
@@ -1071,6 +1200,59 @@ export default function Home() {
               />
             </div>
           </div>
+
+          {selectedItem && (
+            <div className="field">
+              <label>Resize selected (inches)</label>
+
+              <div className="size-panel">
+                <div className="size-row">
+                  <div className="size-input-wrap">
+                    <span className="size-input-label">W</span>
+
+                    <input
+                      className="size-input"
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      value={round2(pxToInches(selectedItem.width))}
+                      onChange={(e) =>
+                        setWidthInches(parseFloat(e.target.value))
+                      }
+                    />
+
+                    <span className="size-unit">in</span>
+                  </div>
+
+                  <div className="size-input-wrap">
+                    <span className="size-input-label">H</span>
+
+                    <input
+                      className="size-input"
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      value={round2(pxToInches(selectedItem.height))}
+                      onChange={(e) =>
+                        setHeightInches(parseFloat(e.target.value))
+                      }
+                    />
+
+                    <span className="size-unit">in</span>
+                  </div>
+                </div>
+
+                <div className="toggle">
+                  <label>Lock aspect ratio</label>
+
+                  <div
+                    className={`switch ${lockAspect ? "on" : ""}`}
+                    onClick={() => setLockAspect((prev) => !prev)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           <span className="count-badge">
             {items.length} image{items.length === 1 ? "" : "s"} on page
