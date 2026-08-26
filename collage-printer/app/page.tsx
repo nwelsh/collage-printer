@@ -61,8 +61,8 @@ export default function Home() {
   const [pageSizeKey, setPageSizeKey] = useState("8.5x11");
 
   const [pageDimensions, setPageDimensions] = useState({
-    width: 794, // 8.27in * 96dpi
-    height: 1123,
+    width: 8.5 * DPI_RENDER,
+    height: 11 * DPI_RENDER,
   });
 
   const pageSize = PAGE_SIZES[pageSizeKey];
@@ -1106,9 +1106,14 @@ export default function Home() {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
-            margin: 0;
-            width: ${pageSize.width}in !important;
-            height: ${pageSize.height}in !important;
+
+            width: ${pageDimensions.width}px !important;
+            height: ${pageDimensions.height}px !important;
+
+            transform-origin: top left;
+            transform: scale(${96 / scale});
+
+            margin: 0 !important;
           }
 
           .crop,
