@@ -36,6 +36,7 @@ const DPI_RENDER = 96;
 TODO:
 - Save
 - Resize many image
+- default to 1 inch 
 - sizing the page correctly 
 - multiselect image
 */
@@ -57,7 +58,7 @@ export default function Home() {
   const [showGrid, setShowGrid] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [lockAspect, setLockAspect] = useState(true);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(2);
 
   const [pageSizeKey, setPageSizeKey] = useState("8.5x11");
 
@@ -870,7 +871,6 @@ export default function Home() {
           align-items: center;
           justify-content: center;
           gap: 6px;
-          margin-top: 10px;
         }
 
         .zoom-btn,
@@ -920,7 +920,6 @@ export default function Home() {
             radial-gradient(circle at 1px 1px, #3a3c42 1px, transparent 0) 0 0 /
               22px 22px,
             var(--graphite);
-          margin-top: 100px;
         }
 
         .page-wrap {
@@ -1135,15 +1134,16 @@ export default function Home() {
             display: block !important;
           }
 
+          .zoom-stage {
+            width: ${pageDimensions.width}px !important;
+            height: ${pageDimensions.height}px !important;
+          }
+
           .page-wrap {
             position: static !important;
             transform: none !important;
           }
 
-          .zoom-stage {
-            width: ${pageDimensions.width}px !important;
-            height: ${pageDimensions.height}px !important;
-          }
           body * {
             visibility: hidden;
           }
@@ -1158,9 +1158,18 @@ export default function Home() {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
-            margin: 0;
-            width: ${pageSize.width}in !important;
-            height: ${pageSize.height}in !important;
+            margin: 0 !important;
+
+            /*
+     * Keep the page in the same pixel coordinate system
+     * used by the editor, then scale it to true 96-DPI
+     * print dimensions.
+     */
+            width: ${pageDimensions.width}px !important;
+            height: ${pageDimensions.height}px !important;
+
+            transform: scale(${DPI_RENDER / scale}) !important;
+            transform-origin: top left !important;
           }
 
           .crop,
