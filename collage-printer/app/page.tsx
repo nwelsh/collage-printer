@@ -32,8 +32,8 @@ const PAGE_SIZES: Record<string, PageSize> = {
 const GRID = 20;
 const DPI_RENDER = 96;
 
-// TODO:
 /*
+TODO:
 - Save
 - Resize many image
 - sizing the page correctly 
