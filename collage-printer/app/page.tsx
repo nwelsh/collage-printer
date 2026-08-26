@@ -57,6 +57,7 @@ export default function Home() {
   const [showGrid, setShowGrid] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [lockAspect, setLockAspect] = useState(true);
+  const [zoom, setZoom] = useState(1);
 
   const [pageSizeKey, setPageSizeKey] = useState("8.5x11");
 
@@ -336,8 +337,8 @@ export default function Home() {
 
     function handleMove(ev: PointerEvent) {
       if (mode === "move") {
-        let x = startLeft + (ev.clientX - startX);
-        let y = startTop + (ev.clientY - startY);
+        let x = startLeft + (ev.clientX - startX) / zoom;
+        let y = startTop + (ev.clientY - startY) / zoom;
 
         if (snapEnabled) {
           x = Math.round(x / GRID) * GRID;
@@ -352,8 +353,8 @@ export default function Home() {
       }
 
       if (mode === "resize") {
-        let width = Math.max(20, startWidth + (ev.clientX - startX));
-        let height = Math.max(20, startHeight + (ev.clientY - startY));
+        let width = Math.max(20, startWidth + (ev.clientX - startX) / zoom);
+        let height = Math.max(20, startHeight + (ev.clientY - startY) / zoom);
 
         if (snapEnabled) {
           width = Math.round(width / GRID) * GRID;
@@ -862,6 +863,50 @@ export default function Home() {
           font-family: "Courier New", monospace;
         }
 
+        /* Zoom */
+
+        .zoom-controls {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          margin-top: 10px;
+        }
+
+        .zoom-btn,
+        .zoom-value {
+          height: 32px;
+          border: 1px solid var(--line);
+          background: var(--graphite);
+          color: #f2f2f0;
+          font-family: "Courier New", monospace;
+          cursor: pointer;
+        }
+
+        .zoom-btn {
+          width: 32px;
+          border-radius: 8px;
+          font-size: 18px;
+        }
+
+        .zoom-value {
+          min-width: 70px;
+          padding: 0 10px;
+          border-radius: 8px;
+          font-size: 11px;
+        }
+
+        .zoom-btn:hover,
+        .zoom-value:hover {
+          border-color: var(--mark);
+          background: var(--graphite-2);
+        }
+
+        .zoom-stage {
+          position: relative;
+          flex-shrink: 0;
+        }
+
         /* Canvas */
 
         .viewport {
@@ -875,6 +920,7 @@ export default function Home() {
             radial-gradient(circle at 1px 1px, #3a3c42 1px, transparent 0) 0 0 /
               22px 22px,
             var(--graphite);
+          margin-top: 100px;
         }
 
         .page-wrap {
@@ -1091,6 +1137,12 @@ export default function Home() {
 
           .page-wrap {
             position: static !important;
+            transform: none !important;
+          }
+
+          .zoom-stage {
+            width: ${pageDimensions.width}px !important;
+            height: ${pageDimensions.height}px !important;
           }
           body * {
             visibility: hidden;
@@ -1106,14 +1158,9 @@ export default function Home() {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
-
-            width: ${pageDimensions.width}px !important;
-            height: ${pageDimensions.height}px !important;
-
-            transform-origin: top left;
-            transform: scale(${96 / scale});
-
-            margin: 0 !important;
+            margin: 0;
+            width: ${pageSize.width}in !important;
+            height: ${pageSize.height}in !important;
           }
 
           .crop,
@@ -1265,6 +1312,32 @@ export default function Home() {
 
           <div className="spacer" />
 
+          <div className="zoom-controls">
+            <button
+              className="zoom-btn"
+              onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}
+              aria-label="Zoom out"
+            >
+              −
+            </button>
+
+            <button
+              className="zoom-value"
+              onClick={() => setZoom(1)}
+              title="Reset zoom"
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+
+            <button
+              className="zoom-btn"
+              onClick={() => setZoom((z) => Math.min(2, z + 0.1))}
+              aria-label="Zoom in"
+            >
+              +
+            </button>
+          </div>
+
           <button
             className="btn primary"
             style={{ fontSize: "14px", padding: "12px" }}
@@ -1281,73 +1354,89 @@ export default function Home() {
         {/* Canvas */}
 
         <div ref={viewportRef} className="viewport">
-          <div className="page-wrap">
-            <div className="crop tl" />
-            <div className="crop tr" />
-            <div className="crop bl" />
-            <div className="crop br" />
-
+          <div
+            className="zoom-stage"
+            style={{
+              width: pageDimensions.width * zoom,
+              height: pageDimensions.height * zoom,
+            }}
+          >
             <div
-              ref={pageRef}
-              className={`page ${isDraggingOver ? "drag-over" : ""}`}
+              className="page-wrap"
               style={{
                 width: pageDimensions.width,
                 height: pageDimensions.height,
+                transform: `scale(${zoom})`,
+                transformOrigin: "top left",
               }}
-              onPointerDown={(e) => {
-                if (e.target === e.currentTarget) {
-                  setSelectedId(null);
-                }
-              }}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
             >
-              {showGrid && <div className="grid-overlay" />}
+              <div className="crop tl" />
+              <div className="crop tr" />
+              <div className="crop bl" />
+              <div className="crop br" />
 
-              {items.length === 0 && (
-                <div className="empty-msg">
-                  <div className="big">Blank page</div>
+              <div
+                ref={pageRef}
+                className={`page ${isDraggingOver ? "drag-over" : ""}`}
+                style={{
+                  width: pageDimensions.width,
+                  height: pageDimensions.height,
+                }}
+                onPointerDown={(e) => {
+                  if (e.target === e.currentTarget) {
+                    setSelectedId(null);
+                  }
+                }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                {showGrid && <div className="grid-overlay" />}
 
-                  <div>Add, drag, or paste images to start arranging</div>
-                </div>
-              )}
+                {items.length === 0 && (
+                  <div className="empty-msg">
+                    <div className="big">Blank page</div>
 
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className={`item ${selectedId === item.id ? "selected" : ""}`}
-                  style={{
-                    left: item.x,
-                    top: item.y,
-                    width: item.width,
-                    height: item.height,
-                    transform: `rotate(${item.rotation}deg)`,
-                    zIndex: item.zIndex,
-                  }}
-                  onPointerDown={(e) => handlePointerDown(e, item)}
-                >
-                  <img src={item.src} draggable={false} alt="" />
+                    <div>Add, drag, or paste images to start arranging</div>
+                  </div>
+                )}
 
-                  <div className="rot-line" />
-
-                  <div className="handle h-rot" title="Rotate" />
-
-                  <div className="handle h-br" title="Resize" />
-
-                  <button
-                    className="del"
-                    title="Delete"
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteItem(item.id);
+                {items.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`item ${selectedId === item.id ? "selected" : ""}`}
+                    style={{
+                      left: item.x,
+                      top: item.y,
+                      width: item.width,
+                      height: item.height,
+                      transform: `rotate(${item.rotation}deg)`,
+                      zIndex: item.zIndex,
                     }}
+                    onPointerDown={(e) => handlePointerDown(e, item)}
                   >
-                    ✕
-                  </button>
-                </div>
-              ))}
+                    <img src={item.src} draggable={false} alt="" />
+
+                    <div className="rot-line" />
+
+                    <div className="handle h-rot" title="Rotate" />
+
+                    <div className="handle h-br" title="Resize" />
+
+                    <button
+                      className="del"
+                      title="Delete"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteItem(item.id);
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
