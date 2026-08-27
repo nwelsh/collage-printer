@@ -54,13 +54,13 @@ export default function Home() {
   const [zTop, setZTop] = useState(10);
 
   const [snapEnabled, setSnapEnabled] = useState(false);
-  const [showGrid, setShowGrid] = useState(false);
+  const [showGrid, setShowGrid] = useState(true);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [lockAspect, setLockAspect] = useState(true);
   const [zoom, setZoom] = useState(2);
 
   const [pageSizeKey, setPageSizeKey] = useState("8.5x11");
-  const [pasteAtOneInch, setPasteAtOneInch] = useState(false);
+  const [pasteAtOneInch, setPasteAtOneInch] = useState(true);
 
   const [pageDimensions, setPageDimensions] = useState({
     width: 8.5 * DPI_RENDER,
@@ -1272,7 +1272,7 @@ export default function Home() {
             </div>
           </div>
           <div className="toggle">
-            <label>Paste at 1" high</label>
+            <label>1 Inch Images</label>
 
             <div
               className={`switch ${pasteAtOneInch ? "on" : ""}`}
