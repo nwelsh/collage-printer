@@ -61,6 +61,7 @@ export default function Home() {
   const [zoom, setZoom] = useState(2);
 
   const [pageSizeKey, setPageSizeKey] = useState("8.5x11");
+  const [pasteAtOneInch, setPasteAtOneInch] = useState(false);
 
   const [pageDimensions, setPageDimensions] = useState({
     width: 8.5 * DPI_RENDER,
@@ -122,7 +123,7 @@ export default function Home() {
     fileInputRef.current?.click();
   }
 
-  function handleFiles(files: FileList | File[] | null) {
+  function handleFiles(files: FileList | File[] | null, fromPaste = false) {
     if (!files) return;
 
     const fileArray = Array.from(files).filter((file) =>
@@ -149,6 +150,16 @@ export default function Home() {
 
           let width = img.naturalWidth;
           let height = img.naturalHeight;
+
+          if (fromPaste && pasteAtOneInch) {
+            const targetHeight = inchesToPx(1);
+            const ratio = targetHeight / height;
+
+            height = targetHeight;
+            width *= ratio;
+          } else {
+            const ratio = Math.min(maxDim / width, maxDim / height, 1);
+          }
 
           const ratio = Math.min(maxDim / width, maxDim / height, 1);
 
@@ -214,7 +225,7 @@ export default function Home() {
     );
 
     if (files.length) {
-      handleFiles(files);
+      handleFiles(files, true);
     }
   }
 
@@ -241,7 +252,7 @@ export default function Home() {
 
       if (files.length) {
         e.preventDefault();
-        handleFiles(files);
+        handleFiles(files, true);
       }
     }
 
@@ -1214,7 +1225,7 @@ export default function Home() {
               type="file"
               accept="image/*"
               multiple
-              onChange={(e) => handleFiles(e.target.files)}
+              onChange={(e) => handleFiles(e.target.files, true)}
             />
           </div>
 
@@ -1260,6 +1271,14 @@ export default function Home() {
                 onClick={() => setShowGrid((prev) => !prev)}
               />
             </div>
+          </div>
+          <div className="toggle">
+            <label>Paste at 1" high</label>
+
+            <div
+              className={`switch ${pasteAtOneInch ? "on" : ""}`}
+              onClick={() => setPasteAtOneInch((prev) => !prev)}
+            />
           </div>
 
           {selectedItem && (
