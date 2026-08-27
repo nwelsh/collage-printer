@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 type Item = {
   id: number;
   src: string;
+  storagePath?: string;
   x: number;
   y: number;
   width: number;
@@ -36,8 +38,8 @@ const DPI_RENDER = 96;
 TODO:
 - Save
 - Resize many image
+- sizing the page correctly 
 - multiselect image
-- top space
 */
 
 function round2(n: number) {
@@ -54,13 +56,22 @@ export default function Home() {
   const [zTop, setZTop] = useState(10);
 
   const [snapEnabled, setSnapEnabled] = useState(false);
-  const [showGrid, setShowGrid] = useState(true);
+  const [showGrid, setShowGrid] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [lockAspect, setLockAspect] = useState(true);
   const [zoom, setZoom] = useState(2);
 
   const [pageSizeKey, setPageSizeKey] = useState("8.5x11");
   const [pasteAtOneInch, setPasteAtOneInch] = useState(true);
+  const [projectName, setProjectName] = useState("My collage");
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [savedProjects, setSavedProjects] = useState<
+    { id: string; name: string; updated_at: string }[]
+  >([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingProject, setIsLoadingProject] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
   const [pageDimensions, setPageDimensions] = useState({
     width: 8.5 * DPI_RENDER,
@@ -122,7 +133,10 @@ export default function Home() {
     fileInputRef.current?.click();
   }
 
-  function handleFiles(files: FileList | File[] | null, fromPaste = false) {
+  async function handleFiles(
+    files: FileList | File[] | null,
+    fromPaste = false,
+  ) {
     if (!files) return;
 
     const fileArray = Array.from(files).filter((file) =>
@@ -131,72 +145,184 @@ export default function Home() {
 
     if (fileArray.length === 0) return;
 
-    fileArray.forEach((file, index) => {
-      const reader = new FileReader();
+    const baseZ = zTop;
 
-      reader.onload = (event) => {
-        const src = event.target?.result;
-
-        if (typeof src !== "string") return;
+    for (const [index, file] of fileArray.entries()) {
+      try {
+        const src = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const result = event.target?.result;
+            typeof result === "string"
+              ? resolve(result)
+              : reject(new Error("Could not read image."));
+          };
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
 
         const img = new Image();
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error("Could not load image."));
+          img.src = src;
+        });
 
-        img.onload = () => {
-          const pageW = pageDimensions.width;
-          const pageH = pageDimensions.height;
+        const path = `images/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
 
-          const maxDim = Math.min(pageW, pageH) * 0.45;
+        const { error: uploadError } = await supabase.storage
+          .from("printer-images")
+          .upload(path, file, {
+            contentType: file.type,
+            cacheControl: "31536000",
+            upsert: false,
+          });
 
-          let width = img.naturalWidth;
-          let height = img.naturalHeight;
+        if (uploadError) throw uploadError;
 
-          if (fromPaste && pasteAtOneInch) {
-            const targetHeight = inchesToPx(1);
-            const ratio = targetHeight / height;
+        const { data: publicData } = supabase.storage
+          .from("printer-images")
+          .getPublicUrl(path);
 
-            height = targetHeight;
-            width *= ratio;
-          } else {
-            const ratio = Math.min(maxDim / width, maxDim / height, 1);
-          }
+        const pageW = pageDimensions.width;
+        const pageH = pageDimensions.height;
+        const maxDim = Math.min(pageW, pageH) * 0.45;
 
+        let width = img.naturalWidth;
+        let height = img.naturalHeight;
+
+        if (fromPaste && pasteAtOneInch) {
+          const targetHeight = inchesToPx(1);
+          const ratio = targetHeight / height;
+          height = targetHeight;
+          width *= ratio;
+        } else {
           const ratio = Math.min(maxDim / width, maxDim / height, 1);
-
           width *= ratio;
           height *= ratio;
+        }
 
-          const x = (pageW - width) / 2 + index * 18;
-
-          const y = (pageH - height) / 2 + index * 18;
-
-          const newZ = zTop + index + 1;
-
-          const newItem: Item = {
-            id: Date.now() + index,
-            src,
-            x,
-            y,
-            width,
-            height,
-            rotation: 0,
-            zIndex: newZ,
-          };
-
-          setItems((prev) => [...prev, newItem]);
-          setSelectedId(newItem.id);
+        const newItem: Item = {
+          id: Date.now() + index + Math.floor(Math.random() * 1000),
+          src: publicData.publicUrl,
+          storagePath: path,
+          x: (pageW - width) / 2 + index * 18,
+          y: (pageH - height) / 2 + index * 18,
+          width,
+          height,
+          rotation: 0,
+          zIndex: baseZ + index + 1,
         };
 
-        img.src = src;
-      };
-
-      reader.readAsDataURL(file);
-    });
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+        setItems((prev) => [...prev, newItem]);
+        setSelectedId(newItem.id);
+      } catch (error) {
+        console.error("Could not upload image:", error);
+        alert(
+          `Could not upload ${file.name}. Check your Supabase Storage policies.`,
+        );
+      }
     }
 
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setZTop((prev) => prev + fileArray.length);
+  }
+
+  async function loadProjectList() {
+    const { data, error } = await supabase
+      .from("printer_projects")
+      .select("id, name, updated_at")
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      console.error("Could not load projects:", error);
+      return;
+    }
+
+    setSavedProjects(data ?? []);
+  }
+
+  useEffect(() => {
+    loadProjectList();
+  }, []);
+
+  async function saveProject() {
+    if (!projectName.trim()) {
+      alert("Give your project a name first.");
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveMessage("");
+
+    try {
+      const id = projectId ?? crypto.randomUUID();
+
+      const { error } = await supabase.from("printer_projects").upsert(
+        {
+          id,
+          name: projectName.trim(),
+          page_size_key: pageSizeKey,
+          items,
+          zoom,
+        },
+        { onConflict: "id" },
+      );
+
+      if (error) throw error;
+
+      setProjectId(id);
+      setSelectedProjectId(id);
+      await loadProjectList();
+      setSaveMessage("Saved");
+      window.setTimeout(() => setSaveMessage(""), 2000);
+    } catch (error) {
+      console.error("Could not save project:", error);
+      alert(
+        `Could not save project: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function loadProject(id: string) {
+    if (!id) return;
+
+    setIsLoadingProject(true);
+
+    try {
+      const { data, error } = await supabase
+        .from("printer_projects")
+        .select("id, name, page_size_key, items, zoom")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+
+      const loadedItems = (data.items ?? []) as Item[];
+
+      setProjectId(data.id);
+      setSelectedProjectId(data.id);
+      setProjectName(data.name);
+      setPageSizeKey(data.page_size_key);
+      setItems(loadedItems);
+      setZoom(data.zoom ?? 2);
+      setZTop(
+        loadedItems.reduce(
+          (highest, item) => Math.max(highest, item.zIndex),
+          10,
+        ),
+      );
+      setSelectedId(null);
+    } catch (error) {
+      console.error("Could not load project:", error);
+      alert(
+        `Could not load project: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    } finally {
+      setIsLoadingProject(false);
+    }
   }
 
   /*
@@ -224,7 +350,7 @@ export default function Home() {
     );
 
     if (files.length) {
-      handleFiles(files, true);
+      handleFiles(files);
     }
   }
 
@@ -711,6 +837,11 @@ export default function Home() {
             background 0.15s;
         }
 
+        .btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
         select:hover,
         .btn:hover {
           border-color: #7a7c82;
@@ -820,6 +951,61 @@ export default function Home() {
           background: var(--graphite);
         }
 
+        .project-panel {
+          border: 1px solid var(--line);
+          border-radius: 1rem;
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          background: var(--graphite);
+        }
+
+        .project-panel > label {
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 1.2px;
+          color: var(--text-dim);
+        }
+
+        .project-name {
+          width: 100%;
+          background: var(--ink);
+          color: #f2f2f0;
+          border: 1px solid var(--line);
+          border-radius: 0.75rem;
+          padding: 9px 10px;
+          font-size: 12px;
+          font-family: inherit;
+          outline: none;
+        }
+
+        .project-name:focus {
+          border-color: var(--mark);
+        }
+
+        .project-load-row {
+          display: flex;
+          gap: 6px;
+        }
+
+        .project-load-row select {
+          min-width: 0;
+          flex: 1;
+        }
+
+        .project-load-row .btn {
+          width: auto;
+          flex-shrink: 0;
+          padding-inline: 12px;
+        }
+
+        .save-message {
+          font-size: 10px;
+          color: var(--mark);
+          text-align: center;
+        }
+
         .size-row {
           display: flex;
           gap: 8px;
@@ -881,6 +1067,7 @@ export default function Home() {
           align-items: center;
           justify-content: center;
           gap: 6px;
+          margin-top: 10px;
         }
 
         .zoom-btn,
@@ -930,6 +1117,7 @@ export default function Home() {
             radial-gradient(circle at 1px 1px, #3a3c42 1px, transparent 0) 0 0 /
               22px 22px,
             var(--graphite);
+          margin-top: 100px;
         }
 
         .page-wrap {
@@ -1144,16 +1332,15 @@ export default function Home() {
             display: block !important;
           }
 
-          .zoom-stage {
-            width: ${pageDimensions.width}px !important;
-            height: ${pageDimensions.height}px !important;
-          }
-
           .page-wrap {
             position: static !important;
             transform: none !important;
           }
 
+          .zoom-stage {
+            width: ${pageDimensions.width}px !important;
+            height: ${pageDimensions.height}px !important;
+          }
           body * {
             visibility: hidden;
           }
@@ -1170,11 +1357,6 @@ export default function Home() {
             left: 0 !important;
             margin: 0 !important;
 
-            /*
-     * Keep the page in the same pixel coordinate system
-     * used by the editor, then scale it to true 96-DPI
-     * print dimensions.
-     */
             width: ${pageDimensions.width}px !important;
             height: ${pageDimensions.height}px !important;
 
@@ -1224,7 +1406,7 @@ export default function Home() {
               type="file"
               accept="image/*"
               multiple
-              onChange={(e) => handleFiles(e.target.files, true)}
+              onChange={(e) => handleFiles(e.target.files)}
             />
           </div>
 
@@ -1271,9 +1453,9 @@ export default function Home() {
               />
             </div>
           </div>
+
           <div className="toggle">
             <label>1 Inch Images</label>
-
             <div
               className={`switch ${pasteAtOneInch ? "on" : ""}`}
               onClick={() => setPasteAtOneInch((prev) => !prev)}
@@ -1332,6 +1514,49 @@ export default function Home() {
               </div>
             </div>
           )}
+
+          <div className="project-panel">
+            <label>Project</label>
+            <input
+              className="project-name"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              placeholder="Project name"
+            />
+
+            <button
+              className="btn primary"
+              onClick={saveProject}
+              disabled={isSaving}
+            >
+              {isSaving ? "Saving..." : "Save Project"}
+            </button>
+
+            {savedProjects.length > 0 && (
+              <div className="project-load-row">
+                <select
+                  value={selectedProjectId}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                >
+                  <option value="">Load a project...</option>
+                  {savedProjects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className="btn"
+                  disabled={!selectedProjectId || isLoadingProject}
+                  onClick={() => loadProject(selectedProjectId)}
+                >
+                  {isLoadingProject ? "Loading..." : "Load"}
+                </button>
+              </div>
+            )}
+
+            {saveMessage && <div className="save-message">{saveMessage}</div>}
+          </div>
 
           <span className="count-badge">
             {items.length} image{items.length === 1 ? "" : "s"} on page
