@@ -36,7 +36,6 @@ const DPI_RENDER = 96;
 
 /*
 TODO:
-- Save
 - Resize many image
 - sizing the page correctly 
 - multiselect image
