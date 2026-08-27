@@ -36,8 +36,6 @@ const DPI_RENDER = 96;
 TODO:
 - Save
 - Resize many image
-- default to 1 inch 
-- sizing the page correctly 
 - multiselect image
 */
 
