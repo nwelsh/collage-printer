@@ -55,7 +55,7 @@ export default function Home() {
   const [zTop, setZTop] = useState(10);
 
   const [snapEnabled, setSnapEnabled] = useState(false);
-  const [showGrid, setShowGrid] = useState(false);
+  const [showGrid, setShowGrid] = useState(true);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [lockAspect, setLockAspect] = useState(true);
   const [zoom, setZoom] = useState(2);
@@ -771,14 +771,14 @@ export default function Home() {
         /* Sidebar */
 
         .sidebar {
-          width: 240px;
+          width: 350px;
           flex-shrink: 0;
           background: var(--ink);
           border-right: 1px solid #000;
           padding: 20px 18px;
           display: flex;
           flex-direction: column;
-          gap: 22px;
+          gap: 8px;
           overflow-y: auto;
         }
 
@@ -1066,7 +1066,6 @@ export default function Home() {
           align-items: center;
           justify-content: center;
           gap: 6px;
-          margin-top: 10px;
         }
 
         .zoom-btn,
@@ -1116,7 +1115,6 @@ export default function Home() {
             radial-gradient(circle at 1px 1px, #3a3c42 1px, transparent 0) 0 0 /
               22px 22px,
             var(--graphite);
-          margin-top: 100px;
         }
 
         .page-wrap {
@@ -1537,7 +1535,7 @@ export default function Home() {
                   value={selectedProjectId}
                   onChange={(e) => setSelectedProjectId(e.target.value)}
                 >
-                  <option value="">Load a project...</option>
+                  <option value="">Select</option>
                   {savedProjects.map((project) => (
                     <option key={project.id} value={project.id}>
                       {project.name}
@@ -1549,7 +1547,7 @@ export default function Home() {
                   disabled={!selectedProjectId || isLoadingProject}
                   onClick={() => loadProject(selectedProjectId)}
                 >
-                  {isLoadingProject ? "Loading..." : "Load"}
+                  {isLoadingProject ? "Loading..." : "Open"}
                 </button>
               </div>
             )}
