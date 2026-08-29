@@ -39,6 +39,9 @@ TODO:
 - Resize many image
 - sizing the page correctly 
 - multiselect image
+- add a toggle for formatting: if is on then they go in a row and wrap around 
+- deploy
+- delete proj
 */
 
 function round2(n: number) {
