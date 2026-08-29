@@ -360,24 +360,78 @@ export default function Home() {
    */
 
   useEffect(() => {
-    function handlePaste(e: ClipboardEvent) {
+    async function handlePaste(e: ClipboardEvent) {
       const clipboardItems = e.clipboardData?.items;
 
       if (!clipboardItems) return;
 
       const files: File[] = [];
 
+      // ------------------------------------------------------------
+      // Normal clipboard images
+      // ------------------------------------------------------------
+
       for (const item of Array.from(clipboardItems)) {
         if (item.type.startsWith("image/")) {
           const file = item.getAsFile();
-          if (file) files.push(file);
+
+          if (file) {
+            files.push(file);
+          }
         }
       }
 
-      if (files.length) {
-        e.preventDefault();
-        handleFiles(files, true);
+      // ------------------------------------------------------------
+      // Google Docs fallback
+      // ------------------------------------------------------------
+
+      if (files.length === 0) {
+        const html = e.clipboardData?.getData("text/html");
+
+        if (html) {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, "text/html");
+
+          const images = Array.from(doc.querySelectorAll("img"));
+
+          for (const image of images) {
+            const src = image.getAttribute("src");
+
+            if (!src) continue;
+
+            try {
+              const response = await fetch(src);
+
+              if (!response.ok) continue;
+
+              const blob = await response.blob();
+
+              if (!blob.type.startsWith("image/")) continue;
+
+              const file = new File(
+                [blob],
+                `google-docs-image-${Date.now()}.png`,
+                {
+                  type: blob.type,
+                },
+              );
+
+              files.push(file);
+            } catch (error) {
+              console.error("Could not fetch Google Docs image:", error);
+            }
+          }
+        }
       }
+
+      if (files.length === 0) {
+        console.log("No usable images found in clipboard.");
+        return;
+      }
+
+      e.preventDefault();
+
+      handleFiles(files, true);
     }
 
     window.addEventListener("paste", handlePaste);
