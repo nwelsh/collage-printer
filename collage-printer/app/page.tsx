@@ -32,7 +32,7 @@ const PAGE_SIZES: Record<string, PageSize> = {
 };
 
 const GRID = 20;
-const DPI_RENDER = 96;
+const DPI_RENDER = 96; 
 
 /*
 TODO:
@@ -1509,7 +1509,7 @@ export default function Home() {
           </div>
 
           <div className="toggle">
-            <label>1 Inch Images</label>
+            <label>1 INCH IMAGES</label>
             <div
               className={`switch ${pasteAtOneInch ? "on" : ""}`}
               onClick={() => setPasteAtOneInch((prev) => !prev)}
