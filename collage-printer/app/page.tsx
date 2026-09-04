@@ -32,7 +32,7 @@ const PAGE_SIZES: Record<string, PageSize> = {
 };
 
 const GRID = 20;
-const DPI_RENDER = 96; 
+const DPI_RENDER = 96;
 
 /*
 TODO:
@@ -768,13 +768,64 @@ export default function Home() {
     function handleKeyDown(e: KeyboardEvent) {
       const target = e.target as HTMLElement;
 
+      // Don't move images while typing in an input/select
       if (
-        (e.key === "Delete" || e.key === "Backspace") &&
-        selectedId !== null &&
-        target.tagName !== "INPUT"
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT"
       ) {
-        deleteItem(selectedId);
+        return;
       }
+
+      if (selectedId === null) return;
+
+      // Delete selected image
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        deleteItem(selectedId);
+        return;
+      }
+
+      // Move selected image with arrow keys
+      const moveAmount = e.shiftKey ? 10 : 1;
+
+      let dx = 0;
+      let dy = 0;
+
+      switch (e.key) {
+        case "ArrowUp":
+          dy = -moveAmount;
+          break;
+
+        case "ArrowDown":
+          dy = moveAmount;
+          break;
+
+        case "ArrowLeft":
+          dx = -moveAmount;
+          break;
+
+        case "ArrowRight":
+          dx = moveAmount;
+          break;
+
+        default:
+          return;
+      }
+
+      e.preventDefault();
+
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === selectedId
+            ? {
+                ...item,
+                x: item.x + dx,
+                y: item.y + dy,
+              }
+            : item,
+        ),
+      );
     }
 
     window.addEventListener("keydown", handleKeyDown);
