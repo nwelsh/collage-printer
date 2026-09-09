@@ -1364,10 +1364,11 @@ export default function Home() {
 
         .handle {
           position: absolute;
-          width: 11px;
-          height: 11px;
+          bottom: -3px;
+          right: -3px;
+          width: 5px;
+          height: 5px;
           background: var(--mark);
-          border: 1.5px solid var(--paper);
           border-radius: 50%;
           display: none;
         }
@@ -1377,8 +1378,8 @@ export default function Home() {
         }
 
         .h-br {
-          right: -6px;
-          bottom: -6px;
+          right: -3px;
+          bottom: -3px;
           cursor: nwse-resize;
         }
 
@@ -1405,13 +1406,12 @@ export default function Home() {
 
         .del {
           position: absolute;
-          top: -11px;
-          right: -11px;
-          width: 20px;
-          height: 20px;
+          top: -5px;
+          right: -5px;
+          width: 10px;
+          height: 10px;
           border-radius: 50%;
-          background: var(--ink);
-          border: 1.5px solid var(--paper);
+          background: var(--mark);
           color: #f2f2f0;
           font-size: 12px;
           line-height: 1;
