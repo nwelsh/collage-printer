@@ -1108,7 +1108,7 @@ export default function Home() {
         }
 
         .save-message {
-          font-size: 10px;
+          font-size: 14px;
           color: var(--mark);
           text-align: center;
         }
