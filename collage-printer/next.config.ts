@@ -7,8 +7,8 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  basePath: isProd ? "/collage-printer" : "",
-  assetPrefix: isProd ? "/collage-printer/" : "",
+  basePath: isProd ? "/collage-portfolio" : "",
+  assetPrefix: isProd ? "/collage-portfolio/" : "",
 };
 
 export default nextConfig;
