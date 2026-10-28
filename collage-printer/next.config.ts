@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  basePath: "/collage-printer",
+  basePath: "/collage-printer/collage-printer",
 };
 
 export default nextConfig;
