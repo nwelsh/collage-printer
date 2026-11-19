@@ -1,3 +1,4 @@
+
 import type { NextConfig } from "next";
 
 const isProd = process.env.NODE_ENV === "production";
@@ -7,8 +8,8 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  basePath: isProd ? "/collage-printer/collage-printer" : "",
-  assetPrefix: isProd ? "/collage-printer/" : "",
+  basePath: isProd ? "/collage-printer" : "",
+  trailingSlash: true,
 };
 
 export default nextConfig;
