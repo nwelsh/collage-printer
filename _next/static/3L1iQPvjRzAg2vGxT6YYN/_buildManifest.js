@@ -3,8 +3,8 @@ self.__BUILD_MANIFEST = {
     "afterFiles": [],
     "beforeFiles": [
       {
-        "source": "/collage-portfolio//_next/:path+",
-        "destination": "/collage-portfolio/collage-portfolio/_next/:path+"
+        "source": "/collage-printer//_next/:path+",
+        "destination": "/collage-printer/collage-printer/_next/:path+"
       }
     ],
     "fallback": []
